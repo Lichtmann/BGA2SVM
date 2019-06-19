@@ -10,7 +10,7 @@
 
 // define the relevant classes
 // we just consider a binary classification problem, so only two classes are relevant!
-// example hard: 1 - 30er, 2 - 50er
+// example hard: 1 - 30er, 2 - 50er  
 // example easy: 1 - 30er, 38 - keep right
 const std::vector<unsigned int> CONSIDERED_CLASS_IDs = { 1, 2 };
 

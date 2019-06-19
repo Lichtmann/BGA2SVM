@@ -4,3 +4,5 @@
 
 /.vs/BGA2SVM/v15/Browse.VC.opendb
 /.vs/BGA2SVM/v15/Browse.VC.db
+/.vs/*
+/cmake-build/*

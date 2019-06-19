@@ -18,7 +18,7 @@
 const std::string IMAGE_DIR_GTSRB = "D:/GTSRB/Final_Training/Images/";
 //const std::string IMAGE_DIR_GTSRB = "C:/Users/Oli K/projects/BGA2/data/GTSRB/Final_Training/Images/";
 
-// create categories of traffic signs
+// create categories of traffic signss
 const std::vector<unsigned int> PROHIBITORY = { 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 15, 16 };
 const std::vector<unsigned int> MANDATORY = { 33, 34, 35, 36, 37, 38, 39, 40 };
 const std::vector<unsigned int> DANGER = { 11, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 };
