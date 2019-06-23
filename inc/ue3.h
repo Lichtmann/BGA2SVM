@@ -10,12 +10,12 @@
 #include <chrono>
 #include <sys/stat.h>
 
-//#include "gnuplot-iostream.h"
+#include "gnuplot-iostream.h"
 
 #define YourClassifierType cv::ml::NormalBayesClassifier
 
 // define path
-const std::string IMAGE_DIR_GTSRB = "D:/GTSRB/Final_Training/Images/";
+const std::string IMAGE_DIR_GTSRB = "D:/GTSRB/Final_Training/Images/";	
 //const std::string IMAGE_DIR_GTSRB = "C:/Users/Oli K/projects/BGA2/data/GTSRB/Final_Training/Images/";
 
 // create categories of traffic signss
@@ -53,7 +53,7 @@ void readDataSet(std::vector<imageLabelGTSRB> &records, std::vector<unsigned int
     std::vector<unsigned int> relevantClasses = ALL)
 {
     unsigned int nSamples = 0;
-    for (unsigned int c = 0;; ++c)
+    for (unsigned int c = 0;; ++c) // each class 0~42
     {
         if (!isClassRelevant(relevantClasses, c))
         {
@@ -73,13 +73,13 @@ void readDataSet(std::vector<imageLabelGTSRB> &records, std::vector<unsigned int
         }
         bool foundFileForClass = false;
 
-        for (int t = 0;; ++t)
+        for (int t = 0;; ++t)  // Tracking
         {
             bool foundFileForTrack = false;
 
             // +=4: we won't use every single frame of each track, just every 4th
             // we have plenty of data and want a subset of good diversity
-            for (int e = 0;; e += 4)
+            for (int e = 0;; e += 4)  //each 4 example
             {
                 char fileName[32];
                 sprintf_s(fileName, "%05d/%05d_%05d.ppm", c, t, e);
@@ -211,48 +211,48 @@ void computeFeaturesToMat(std::vector<imageLabelGTSRB> records, cv::Mat &feature
 // this function displays the first two principal components on a gnuplot
 void visualizePCA(const cv::Mat &features, const cv::Mat &labels)
 {
-    //Gnuplot gp;
+    Gnuplot gp;
 
-    //// assert features.rows == labels.rows
-    //if (features.rows != labels.rows)
-    //{
-    //    std::cout << "[error] cannot display pca. (dimension mismatch.)" << std::endl;
-    //    return;
-    //}
+    // assert features.rows == labels.rows
+    if (features.rows != labels.rows)
+    {
+        std::cout << "[error] cannot display pca. (dimension mismatch.)" << std::endl;
+        return;
+    }
 
-    //float current_label = -1.;
-    //std::vector<std::pair<double, double> > xy_pts;
-    //gp << "set xrange [-5:5]\nset yrange [-5:5]\n";
-    //gp << "plot";
-    //gp << std::fixed << std::setprecision(0); // for nice display of float labels
+    float current_label = -1.;
+    std::vector<std::pair<double, double> > xy_pts;
+    gp << "set xrange [-5:5]\nset yrange [-5:5]\n";
+    gp << "plot";
+    gp << std::fixed << std::setprecision(0); // for nice display of float labels
 
-    //for (int i = 0; i < features.rows; i++)
-    //{
-    //    if (labels.at<float>(i, 0) != current_label)
-    //    {
-    //        // plot vector if not empty (will only be empty first time)
-    //        if (!xy_pts.empty())
-    //        {
-    //            gp << gp.file1d(xy_pts) << "with points title 'class ID: " << current_label << "',";
-    //        }
+    for (int i = 0; i < features.rows; i++)
+    {
+        if (labels.at<float>(i, 0) != current_label)
+        {
+            // plot vector if not empty (will only be empty first time)
+            if (!xy_pts.empty())
+            {
+                gp << gp.file1d(xy_pts) << "with points title 'class ID: " << current_label << "',";
+            }
 
-    //        // create shiny new vector
-    //        xy_pts = std::vector<std::pair<double, double> >();
+            // create shiny new vector
+            xy_pts = std::vector<std::pair<double, double> >();
 
-    //        // remember the new label
-    //        current_label = labels.at<float>(i, 0);
-    //    }
+            // remember the new label
+            current_label = labels.at<float>(i, 0);
+        }
 
-    //    // push the data point to the vector
-    //    xy_pts.push_back(
-    //        std::make_pair(
-    //            features.at<float>(i, 0),
-    //            features.at<float>(i, 1)));
-    //}
+        // push the data point to the vector
+        xy_pts.push_back(
+            std::make_pair(
+                features.at<float>(i, 0),
+                features.at<float>(i, 1)));
+    }
 
-    //// aand plot the last vector
-    //gp << gp.file1d(xy_pts) << "with points title 'class ID: " << current_label << "'" << std::endl;
-    //std::cout << "[info]\tclose the gnuplot window to continue." << std::endl;
+    // aand plot the last vector
+    gp << gp.file1d(xy_pts) << "with points title 'class ID: " << current_label << "'" << std::endl;
+    std::cout << "[info]\tclose the gnuplot window to continue." << std::endl;
 }
 
 
@@ -260,11 +260,11 @@ void visualizePCA(const cv::Mat &features, const cv::Mat &labels)
 void visualizeLearningCurve(std::vector<std::pair<double, double> > trainError, 
     std::vector<std::pair<double, double> > valError)
 {
-   /* Gnuplot gp;
+    Gnuplot gp;
     gp << "set xrange [0:1]\nset yrange [0:1]\n";
     gp << "plot";
     gp << gp.file1d(trainError) << "with line title 'training error',";
     gp << gp.file1d(valError) << "with line title 'validation error'";
     gp << std::endl;
-    std::cout << "[info]\tclose the gnuplot window to continue." << std::endl;*/
+    std::cout << "[info]\tclose the gnuplot window to continue." << std::endl;
 }

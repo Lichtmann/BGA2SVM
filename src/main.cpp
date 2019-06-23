@@ -20,7 +20,14 @@ cv::HOGDescriptor hog;
 
 unsigned int getFeatureVectorDimension()
 {
-    return 	hog.getDescriptorSize();
+	int dem = hog.getDescriptorSize();
+	std::cout << "[Done]\twinSize = " << hog.winSize << std::endl;
+	std::cout << "[Done]\tblockSize = " << hog.blockSize << std::endl;
+	std::cout << "[Done]\tblockStride = " << hog.blockStride << std::endl;
+	std::cout << "[Done]\tcellSize = " << hog.cellSize << std::endl;
+	std::cout << "[Done]\tnbins = " << hog.nbins << std::endl;	
+	std::cout << "[Done]\tgetFeatureVectorDimension() = " << dem << std::endl;
+	return 	hog.getDescriptorSize();
 }
 
 
@@ -182,7 +189,7 @@ double* trainAndPredict (std::vector<imageLabelGTSRB> &records, std::vector<unsi
 	validationLabels.convertTo(validationLabels, CV_32SC1);
 
 	/*** PRINCIPAL COMPONENTS ANALYSIS ***/
-	std::cout << "[info]\tperforming principal components analysis" << std::endl;
+	//std::cout << "[info]\tperforming principal components analysis" << std::endl;
 
 	std::cout << "[info]\tprojecting validation features to new feature space" << std::endl;
 	cv::Mat projectedValidationFeatures;
@@ -210,19 +217,19 @@ int main (int argc, char* argv[])
     std::cout << "[info]\treading training data of relevant classes.." << std::endl;
     
     // stores path and class data
-    std::vector<imageLabelGTSRB> records;
+    std::vector<imageLabelGTSRB> records;  //list<filename,classID>
 
     // stores number of read samples
-    std::vector<unsigned int> nSamplesPerClass;
+    std::vector<unsigned int> nSamplesPerClass; //
 
     // fills in the values to records and nSamplesPerClass for the specified classes
-    readDataSet(records, nSamplesPerClass, CONSIDERED_CLASS_IDs);
+    readDataSet(records, nSamplesPerClass, CONSIDERED_CLASS_IDs/*{ 1, 2 }*/);
     std::cout << "[info]\t" << records.size() << " samples in total." << std::endl;
 
     // flag to switch between task 1 and 2
 	// task 1 single rund task 2 multiple runs for training curve
     // switch here to work on task 2 (learning curve)
-    const int task = 2;
+    const int task = 1;
 
     if (task == 1)
     {
