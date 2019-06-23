@@ -5,15 +5,21 @@
 #include <vector>
 #include <cmath>
 
+#include<fstream>
+
 #include "ue3.h"
 
 
 // define the relevant classes
 // we just consider a binary classification problem, so only two classes are relevant!
-// example hard: 1 - 30er, 2 - 50er  
+// example hard: 1 - 30er, 2 - 50er
 // example easy: 1 - 30er, 38 - keep right
-const std::vector<unsigned int> CONSIDERED_CLASS_IDs = { 1, 2 };
 
+// alle von prohiboitory
+
+// input und predictions gegenüberstellen
+
+const std::vector<unsigned int> CONSIDERED_CLASS_IDs = { 1, 2, 3 ,4};
 
 cv::PCA pca;
 cv::HOGDescriptor hog;
@@ -25,9 +31,9 @@ unsigned int getFeatureVectorDimension()
 	std::cout << "[Done]\tblockSize = " << hog.blockSize << std::endl;
 	std::cout << "[Done]\tblockStride = " << hog.blockStride << std::endl;
 	std::cout << "[Done]\tcellSize = " << hog.cellSize << std::endl;
-	std::cout << "[Done]\tnbins = " << hog.nbins << std::endl;	
+	std::cout << "[Done]\tnbins = " << hog.nbins << std::endl;
 	std::cout << "[Done]\tgetFeatureVectorDimension() = " << dem << std::endl;
-	return 	hog.getDescriptorSize();
+    return 	hog.getDescriptorSize();
 }
 
 
@@ -79,7 +85,7 @@ INPUTS:
 OUTPUTS:
     - the correct classification rate on the training data set
 */
-double trainClassifier(YourClassifierType &classifier, std::vector<imageLabelGTSRB> trainingRecords, bool visualize_pca)
+double trainClassifier(YourClassifierType &classifier, std::vector<imageLabelGTSRB> trainingRecords,bool perform_pca, bool visualize_pca)
 {
     // check if there are any records
     if (trainingRecords.empty())
@@ -94,26 +100,26 @@ double trainClassifier(YourClassifierType &classifier, std::vector<imageLabelGTS
     cv::Mat trainingLabels;
     computeFeaturesToMat(trainingRecords, trainingFeatures, trainingLabels);
 
-
-    /*** PRINCIPAL COMPONENTS ANALYSIS ***/
-    std::cout << "[info]\tperforming principal components analysis" << std::endl;
-	pca = cv::PCA(trainingFeatures, cv::Mat(), cv::PCA::Flags::DATA_AS_ROW,10);
-	// TODO: create the pca using your training data
-
-
-    std::cout << "[info]\tprojecting training features to new feature space" << std::endl;
-    cv::Mat projectedTrainingFeatures;
-	pca.project(trainingFeatures, projectedTrainingFeatures);
-
-	if (visualize_pca)
+	cv::Mat projectedTrainingFeatures;
+	if (perform_pca)
 	{
-		/*** DISPLAY FIRST TWO PRINCIPAL COMPONENTS ***/
-		std::cout << "[info]\tdisplaying the first two principal components" << std::endl;
-		visualizePCA(projectedTrainingFeatures, trainingLabels);
+		/*** PRINCIPAL COMPONENTS ANALYSIS ***/
+		std::cout << "[info]\tperforming principal components analysis" << std::endl;
+		pca = cv::PCA(trainingFeatures, cv::Mat(), cv::PCA::Flags::DATA_AS_ROW, 40);
+		// TODO: create the pca using your training data
 
+
+		std::cout << "[info]\tprojecting training features to new feature space" << std::endl;
+		pca.project(trainingFeatures, projectedTrainingFeatures);
+
+		if (visualize_pca)
+		{
+			/*** DISPLAY FIRST TWO PRINCIPAL COMPONENTS ***/
+			std::cout << "[info]\tdisplaying the first two principal components" << std::endl;
+			visualizePCA(projectedTrainingFeatures, trainingLabels);
+		}
 	}
 
-	 
     /*** TRAIN THE CLASSIFIER ***/
     // TODO: choose a classifier model (e.g. SVM, k-Nearest-Neighbor, NormalBayes, NeuralNetwork, ...) and train
     std::cout << "[info]\ttraining the classifier" << std::endl;
@@ -126,9 +132,14 @@ double trainClassifier(YourClassifierType &classifier, std::vector<imageLabelGTS
 				responses.at<int>(i, j) = (int)trainingLabels.at<float>(i, j);
 	}
 
-
-	classifier.train(projectedTrainingFeatures,cv::ml::ROW_SAMPLE, responses);
-
+	if (perform_pca)
+	{
+		classifier.train(projectedTrainingFeatures, cv::ml::ROW_SAMPLE, responses);
+	}
+	if (!perform_pca)
+	{
+		classifier.train(trainingFeatures, cv::ml::ROW_SAMPLE, responses);
+	}
 
     /*** CHECK THE TRAINING ERROR ***/
     std::cout << "[info]\ttraining error of the classifier" << std::endl;
@@ -164,7 +175,7 @@ void createLearningCurve(std::vector<std::vector<std::pair<double, double>>> err
 }
 
 //
-double* trainAndPredict (std::vector<imageLabelGTSRB> &records, std::vector<unsigned int> nSamplesPerClass, double trainRatio , bool visualize_pca)
+std::vector<double> trainAndPredict (std::vector<imageLabelGTSRB> &records, std::vector<unsigned int> nSamplesPerClass, double trainRatio , bool perform_pca, bool visualize_pca=false)
 {
 	std::cout << "\n---------------------------------------" << std::endl;
 
@@ -180,7 +191,7 @@ double* trainAndPredict (std::vector<imageLabelGTSRB> &records, std::vector<unsi
 	// TODO: make this work
 	cv::Ptr<YourClassifierType> classifier = YourClassifierType::create();
 	double training_ccr;
-	training_ccr = trainClassifier(*classifier, trainingRecords, visualize_pca);
+	training_ccr = trainClassifier(*classifier, trainingRecords, perform_pca, visualize_pca);
 
 	cv::Mat validationFeatures;
 	cv::Mat validationLabels;
@@ -202,17 +213,16 @@ double* trainAndPredict (std::vector<imageLabelGTSRB> &records, std::vector<unsi
 	evaluation_ccr = evaluateClassifier(*classifier, projectedValidationFeatures, validationLabels);
 
 	// create outout array and return
-	double output_crr[2] { training_ccr,evaluation_ccr };
+	std::vector<double> output_crr{ training_ccr,evaluation_ccr };
 	return output_crr;
-
 }
-
 
 
 // main method
 // takes care of program flow
 int main (int argc, char* argv[])
 {
+
     /*** READING INPUT DATA ***/
     std::cout << "[info]\treading training data of relevant classes.." << std::endl;
     
@@ -220,21 +230,21 @@ int main (int argc, char* argv[])
     std::vector<imageLabelGTSRB> records;  //list<filename,classID>
 
     // stores number of read samples
-    std::vector<unsigned int> nSamplesPerClass; //
+    std::vector<unsigned int> nSamplesPerClass;
 
     // fills in the values to records and nSamplesPerClass for the specified classes
-    readDataSet(records, nSamplesPerClass, CONSIDERED_CLASS_IDs/*{ 1, 2 }*/);
+    readDataSet(records, nSamplesPerClass, CONSIDERED_CLASS_IDs);
     std::cout << "[info]\t" << records.size() << " samples in total." << std::endl;
 
     // flag to switch between task 1 and 2
 	// task 1 single rund task 2 multiple runs for training curve
     // switch here to work on task 2 (learning curve)
-    const int task = 1;
+    const int task = 2;
 
     if (task == 1)
     {
 		// perform training and predict on dataset
-		trainAndPredict(records, nSamplesPerClass,0.9,true);
+		trainAndPredict(records, nSamplesPerClass,0.9,true,true);
 
     }
 
@@ -243,17 +253,26 @@ int main (int argc, char* argv[])
 		// perform training and predict on dataset several times 
 		// to create learning curve
 
-		int steps = 8; // number of runs
-		double trainRatio = 0.1; // starting with 10% training data
-		double ratiostep = 0.1;
+		int steps = 80; // number of runs
+		double trainRatio = 0.005; // starting with 10% training data
+		double ratiostep = 0.005;
 		// first is ratio, second pointer to err data
 		std::vector<std::vector<std::pair<double, double>>> error_storage;
 
+		// create object for file handling and open file
+		std::fstream file_handler;
+		std::fstream file_handler_2;
+
+		std::string filename_err = "../data/training_error.txt";
+		std::string filename_val = "../data/validation_error.txt";
+
+		file_handler.open(filename_err, std::fstream::out);
+		file_handler_2.open(filename_val, std::fstream::out);
 
 		for (size_t i = 0; i < steps; i++)
 		{
-			bool visualize_pca = false;
-			double* error = trainAndPredict(records, nSamplesPerClass, trainRatio + ratiostep *(double)i, visualize_pca); // raise trainingRatio every step
+			bool perform_pca = true;
+			std::vector<double> error = trainAndPredict(records, nSamplesPerClass, trainRatio + ratiostep *(double)i, perform_pca); // raise trainingRatio every step
 			
 			// cast back data 
 			// and cut decimal 
@@ -264,9 +283,8 @@ int main (int argc, char* argv[])
 			recent_error.push_back(std::make_pair(trainRatio + ratiostep * (double)i, 1- training_crr));
 			recent_error.push_back(std::make_pair(trainRatio + ratiostep * (double)i, 1- validation_crr));
 
-
 			error_storage.push_back(recent_error);
-
+			
 		}
 
         std::cout << "[info]\tcreating learning curve" << std::endl;
