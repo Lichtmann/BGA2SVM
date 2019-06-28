@@ -4,9 +4,7 @@
 #include <map>
 #include <vector>
 #include <cmath>
-
 #include<fstream>
-
 #include "ue3.h"
 
 
@@ -19,7 +17,7 @@
 
 // input und predictions gegenüberstellen
 
-const std::vector<unsigned int> CONSIDERED_CLASS_IDs = { 1, 2, 3 ,4};
+const std::vector<unsigned int> CONSIDERED_CLASS_IDs = { 0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 15, 16 };
 
 cv::PCA pca;
 cv::HOGDescriptor hog;
@@ -53,7 +51,7 @@ INPUTS:
 OUTPUTS:
     - the correct classification rate on the given data set
 */
-double evaluateClassifier(const YourClassifierType &classifier, const cv::Mat &features, const cv::Mat &labels)
+double evaluateClassifier(const YourClassifierType &classifier, const cv::Mat &features, const cv::Mat &labels, double train_ratio = 0.0, bool output = false)
 {
     if (features.empty())
     {
@@ -71,7 +69,24 @@ double evaluateClassifier(const YourClassifierType &classifier, const cv::Mat &f
     int misclassifications = cv::countNonZero(diff);
     std::cout << "[info]\tmisclassifications: " << misclassifications << " of " << labels.rows << std::endl;
 
-    double ccr;
+	if (output)
+	{
+		// write predictions to csv
+		// create and open output data file
+		int ratio = train_ratio * 1000.0;
+		std::ofstream file_handler;
+		std::string output_filename = "../data/labels_predictions" + std::to_string(ratio) + ".csv"; 
+		file_handler.open(output_filename);
+		for (size_t i = 0; i < predictions.rows; i++)
+		{
+			file_handler << labels.at<int>(i, 0);
+			file_handler << ",";
+			file_handler << predictions.at<int>(i, 0);
+			file_handler << "\n";
+		}
+	}
+
+	double ccr;
     ccr = 1.*(labels.rows - misclassifications) / labels.rows;
     std::cout << "[info]\tccr: " << ccr << std::endl;
     return ccr;
@@ -105,7 +120,7 @@ double trainClassifier(YourClassifierType &classifier, std::vector<imageLabelGTS
 	{
 		/*** PRINCIPAL COMPONENTS ANALYSIS ***/
 		std::cout << "[info]\tperforming principal components analysis" << std::endl;
-		pca = cv::PCA(trainingFeatures, cv::Mat(), cv::PCA::Flags::DATA_AS_ROW, 40);
+		pca = cv::PCA(trainingFeatures, cv::Mat(), cv::PCA::Flags::DATA_AS_ROW, 35);
 		// TODO: create the pca using your training data
 
 
@@ -210,7 +225,7 @@ std::vector<double> trainAndPredict (std::vector<imageLabelGTSRB> &records, std:
 
 	std::cout << "[info]\tvalidation error of the classifier" << std::endl;
 	double evaluation_ccr;
-	evaluation_ccr = evaluateClassifier(*classifier, projectedValidationFeatures, validationLabels);
+	evaluation_ccr = evaluateClassifier(*classifier, projectedValidationFeatures, validationLabels,trainRatio,true);
 
 	// create outout array and return
 	std::vector<double> output_crr{ training_ccr,evaluation_ccr };
@@ -227,7 +242,7 @@ int main (int argc, char* argv[])
     std::cout << "[info]\treading training data of relevant classes.." << std::endl;
     
     // stores path and class data
-    std::vector<imageLabelGTSRB> records;  //list<filename,classID>
+    std::vector<imageLabelGTSRB> records;
 
     // stores number of read samples
     std::vector<unsigned int> nSamplesPerClass;
@@ -245,7 +260,6 @@ int main (int argc, char* argv[])
     {
 		// perform training and predict on dataset
 		trainAndPredict(records, nSamplesPerClass,0.9,true,true);
-
     }
 
 	else if (task == 2)
@@ -253,21 +267,20 @@ int main (int argc, char* argv[])
 		// perform training and predict on dataset several times 
 		// to create learning curve
 
-		int steps = 80; // number of runs
-		double trainRatio = 0.005; // starting with 10% training data
+		int steps = 30; // number of runs 30 for 15% training data
+		double trainRatio = 0.005; // starting with 0.005% training data
 		double ratiostep = 0.005;
+
+
+
 		// first is ratio, second pointer to err data
 		std::vector<std::vector<std::pair<double, double>>> error_storage;
 
-		// create object for file handling and open file
-		std::fstream file_handler;
-		std::fstream file_handler_2;
 
-		std::string filename_err = "../data/training_error.txt";
-		std::string filename_val = "../data/validation_error.txt";
-
-		file_handler.open(filename_err, std::fstream::out);
-		file_handler_2.open(filename_val, std::fstream::out);
+		// create and open output data file
+		std::ofstream file_handler;
+		std::string output_filename = "../data/results.csv";
+		file_handler.open(output_filename);
 
 		for (size_t i = 0; i < steps; i++)
 		{
@@ -275,7 +288,6 @@ int main (int argc, char* argv[])
 			std::vector<double> error = trainAndPredict(records, nSamplesPerClass, trainRatio + ratiostep *(double)i, perform_pca); // raise trainingRatio every step
 			
 			// cast back data 
-			// and cut decimal 
 			double training_crr = error[0]; 
 			double validation_crr = error[1];
 			// store in container
@@ -285,7 +297,17 @@ int main (int argc, char* argv[])
 
 			error_storage.push_back(recent_error);
 			
+			// write to csv
+			file_handler << trainRatio + ratiostep * (double)i;	// training data in %
+			file_handler << ",";
+			file_handler << 1 - training_crr;
+			file_handler << ",";
+			file_handler << 1 - validation_crr;
+			file_handler << "\n";
+			
 		}
+
+		file_handler.close();
 
         std::cout << "[info]\tcreating learning curve" << std::endl;
 
@@ -300,3 +322,5 @@ int main (int argc, char* argv[])
 }
 
 
+
+	
